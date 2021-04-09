@@ -88,9 +88,9 @@ Biensûr, lorsqu'on parle de gestion de conccurence entre plusieurs transactions
 | t3 | ```UPDATE EMP SET SAL = SAL + 1000 WHERE ENAME ='Mohamed';```|------|
 | t4 | ------ |```UPDATE EMP SET SAL = SAL + 1000 WHERE ENAME ='Hichem';```|La session 1 va detecter l'interblocage |
 | t5 | ```Commit;``` |------| Session 2: --> 1 row updated.|
-| t6  |```UPDATE EMP SET SAL = SAL + 1000 WHERE ENAME ='Mohamed';```| ------|------|
-| t7 |  ------ |```Commit;```| --------|
-| t8 | ------ |```SELECT ENAME, SAL FROM EMP WHERE ENAME IN ('Mohamed','Hichem', 'Maaoui');```|------|
+| t6  |```UPDATE EMP SET SAL = SAL + 1000 WHERE ENAME ='Mohamed';```| ------|il n'ya pas de mise a jour|
+| t7 |  ------ |```Commit;```| session 1: 1 row updated|
+| t8 | ------ |```SELECT ENAME, SAL FROM EMP WHERE ENAME IN ('Mohamed','Hichem', 'Maaoui');```|hichem: 3000 , mohamed :5000|
 
 ## Concurrence : Niveaux d'isolation des transactions
 
@@ -118,16 +118,16 @@ Autrement dit, le développeur déclare qu’une lecture va être suivie d’une
 | :----: | :----: |:----:|:----:|
 | t0| ``` SELECT ENAME, SAL FROM EMP WHERE ENAME IN ('Mohamed','Hichem');``` |||
 | t1 | ``` UPDATE EMP SET SAL = 4000 WHERE ENAME ='Hichem'; ``` |------|------|
-| t2 | ------ |```SET TRANSACTION ISOLATION LEVEL READ COMMITTED;```|------|
-| t3 | ------ |```SELECT ENAME, SAL FROM EMP WHERE ENAME IN ('Mohamed','Hichem');```|------|
-| t4 | ------ |```UPDATE EMP SET SAL = 3800 WHERE ENAME ='Mohamed';```|------|
-| t5 | ```Insert into EMP (EMPNO,ENAME,JOB,MGR,HIREDATE,COMM,DEPTNO) values ('9999','Maaoui','Magician',null,to_date('17/02/2021','DD/MM/RR'),null,'10');``` |------|------|
-| t6 | ------ |```SELECT ENAME, SAL FROM EMP WHERE ENAME IN ('Mohamed','Hichem', 'Maaoui');```|------|
-| t7 | ------ |```UPDATE EMP SET SAL = 5000 WHERE ENAME ='Hichem';```|------|
-| t8 | ```Commit;``` |------|------|
-| t9 | ------ |```SELECT ENAME, SAL FROM EMP WHERE ENAME IN ('Mohamed','Hichem', 'Maaoui');```|------|
-| t10| ------ |```COMMIT;```|------|
-| t11| ```SELECT ENAME, SAL FROM EMP WHERE ENAME IN ('Mohamed','Hichem', 'Maaoui');```|------|------|
+| t2 | ------ |```SET TRANSACTION ISOLATION LEVEL READ COMMITTED;```|session 2:->transaction definie|
+| t3 | ------ |```SELECT ENAME, SAL FROM EMP WHERE ENAME IN ('Mohamed','Hichem');```|hichem:2800 , mohamed:2000|
+| t4 | ------ |```UPDATE EMP SET SAL = 3800 WHERE ENAME ='Mohamed';```|session 2: 1 row updated|
+| t5 | ```Insert into EMP (EMPNO,ENAME,JOB,MGR,HIREDATE,COMM,DEPTNO) values ('9999','Maaoui','Magician',null,to_date('17/02/2021','DD/MM/RR'),null,'10');``` |------|session 2 : 1 ligne créé|
+| t6 | ------ |```SELECT ENAME, SAL FROM EMP WHERE ENAME IN ('Mohamed','Hichem', 'Maaoui');```|hichem:2800 , mohamed 3800|
+| t7 | ------ |```UPDATE EMP SET SAL = 5000 WHERE ENAME ='Hichem';```|mise a jour bloqué|
+| t8 | ```Commit;``` |------|session 2: 1 row updated|
+| t9 | ------ |```SELECT ENAME, SAL FROM EMP WHERE ENAME IN ('Mohamed','Hichem', 'Maaoui');```|hichem:5000 , mohamed : 3800, maaoui:0|
+| t10| ------ |```COMMIT;```|validation effectué|
+| t11| ```SELECT ENAME, SAL FROM EMP WHERE ENAME IN ('Mohamed','Hichem', 'Maaoui');```|------|hichem :5000, mohamed : 3800 , maaoui : 0|
 
 
 
@@ -137,9 +137,9 @@ Autrement dit, le développeur déclare qu’une lecture va être suivie d’une
 | Timing | Session N° 1  | Session N° 2 |Résultat | 
 | :----: | :----: |:----:|:----:|
 | t0| ``` SELECT ENAME, SAL FROM EMP WHERE ENAME IN ('Mohamed','Hichem');``` |||
-| t1| ``` UPDATE EMP SET SAL = 4000 WHERE ENAME ='Hichem'; ``` |------|------|
-| t2| ------ |```SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;```|------|
-| t3| ------ |```SELECT ENAME, SAL FROM EMP WHERE ENAME IN ('Mohamed','Hichem');```|------|
+| t1| ``` UPDATE EMP SET SAL = 4000 WHERE ENAME ='Hichem'; ``` |------|hichem : 2800 , mohamed: 2000|
+| t2| ------ |```SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;```|session 1 : 1 row updated|
+| t3| ------ |```SELECT ENAME, SAL FROM EMP WHERE ENAME IN ('Mohamed','Hichem');```|session 2 : transaction |
 | t4| ------ |```UPDATE EMP SET SAL = 3800 WHERE ENAME ='Mohamed';```|------|
 | t5| ```Insert into EMP (EMPNO,ENAME,JOB,MGR,HIREDATE,COMM,DEPTNO) values ('9999','Maaoui','Magician',null,to_date('17/02/2021','DD/MM/RR'),null,'10');``` |------|------|
 | t6| ```COMMIT;```|------ |------|
@@ -149,16 +149,16 @@ Autrement dit, le développeur déclare qu’une lecture va être suivie d’une
 | t10|```SELECT ENAME, SAL FROM EMP WHERE ENAME IN ('Mohamed','Hichem', 'Maaoui');```| ------ |------|
 | t11| ------ |```SELECT ENAME, SAL FROM EMP WHERE ENAME IN ('Mohamed','Hichem', 'Maaoui');```|------|
 | t12| ------ | ```COMMIT;```|------|
-| t13| ``` UPDATE EMP SET SAL = 5000 WHERE ENAME ='Maaoui'; ``` |------|------|
-| t14| ------ |```SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;```|------|
-| t15| ------ |```UPDATE EMP SET SAL = 5200 WHERE ENAME ='Maaoui';```|------|
-| t16| ```COMMIT;``` |------|------|
-| t17| ------ |```ROLLBACK;```|------|
-| t18| ------ |```SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;```|------|
-| t19| ------ |```SELECT ENAME, SAL FROM EMP WHERE ENAME IN ('Mohamed','Hichem', 'Maaoui');```|------|
-| t20| ``` UPDATE EMP SET SAL = 5200 WHERE ENAME ='Maaoui'; ``` |------|------|
-| t21| ```COMMIT;``` |------|------|
-| t22| ------ | ```COMMIT;```|------|
+| t13| ``` UPDATE EMP SET SAL = 5000 WHERE ENAME ='Maaoui'; ``` |------|session 2 : annulation|
+| t14| ------ |```SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;```|session 2 :> transaction definie|
+| t15| ------ |```UPDATE EMP SET SAL = 5200 WHERE ENAME ='Maaoui';```|hichem :2800;mohamed3800;maaoui:0|
+| t16| ```COMMIT;``` |------|session 2 : validation effectée|
+| t17| ------ |```ROLLBACK;```|session 1 : 1 row updated |
+| t18| ------ |```SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;```|session 2 : transaction definie|
+| t19| ------ |```SELECT ENAME, SAL FROM EMP WHERE ENAME IN ('Mohamed','Hichem', 'Maaoui');```|mise a jour a ete definie|
+| t20| ``` UPDATE EMP SET SAL = 5200 WHERE ENAME ='Maaoui'; ``` |------|hichem : 4000 ; mohamed:3800;maaoui:5000|
+| t21| ```COMMIT;``` |------|session 1:->1 validation effectée|
+| t22| ------ | ```COMMIT;```|session 2 :->validation effecté|
 | t23| ------ |```SELECT ENAME, SAL FROM EMP WHERE ENAME IN ('Mohamed','Hichem', 'Maaoui');```|------|
 
 
