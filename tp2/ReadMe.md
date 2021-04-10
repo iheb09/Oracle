@@ -116,13 +116,13 @@ Autrement dit, le développeur déclare qu’une lecture va être suivie d’une
 
 | Timing | Session N° 1  | Session N° 2 |Résultat | 
 | :----: | :----: |:----:|:----:|
-| t0| ``` SELECT ENAME, SAL FROM EMP WHERE ENAME IN ('Mohamed','Hichem');``` |||
-| t1 | ``` UPDATE EMP SET SAL = 4000 WHERE ENAME ='Hichem'; ``` |------|------|
+| t0| ``` SELECT ENAME, SAL FROM EMP WHERE ENAME IN ('Mohamed','Hichem');``` ||mohamed:2000;hichem:2800|
+| t1 | ``` UPDATE EMP SET SAL = 4000 WHERE ENAME ='Hichem'; ``` |------|hichem:4000|
 | t2 | ------ |```SET TRANSACTION ISOLATION LEVEL READ COMMITTED;```|session 2:->transaction definie|
-| t3 | ------ |```SELECT ENAME, SAL FROM EMP WHERE ENAME IN ('Mohamed','Hichem');```|hichem:2800 , mohamed:2000|
+| t3 | ------ |```SELECT ENAME, SAL FROM EMP WHERE ENAME IN ('Mohamed','Hichem');```|hichem:2800 , mohamed:2000 (no changes)|
 | t4 | ------ |```UPDATE EMP SET SAL = 3800 WHERE ENAME ='Mohamed';```|session 2: 1 row updated|
 | t5 | ```Insert into EMP (EMPNO,ENAME,JOB,MGR,HIREDATE,COMM,DEPTNO) values ('9999','Maaoui','Magician',null,to_date('17/02/2021','DD/MM/RR'),null,'10');``` |------|session 2 : 1 ligne créé|
-| t6 | ------ |```SELECT ENAME, SAL FROM EMP WHERE ENAME IN ('Mohamed','Hichem', 'Maaoui');```|hichem:2800 , mohamed 3800|
+| t6 | ------ |```SELECT ENAME, SAL FROM EMP WHERE ENAME IN ('Mohamed','Hichem', 'Maaoui');```|hichem:2800 , mohamed 3800,maaoui:n a pas de salaire|
 | t7 | ------ |```UPDATE EMP SET SAL = 5000 WHERE ENAME ='Hichem';```|mise a jour bloqué|
 | t8 | ```Commit;``` |------|session 2: 1 row updated|
 | t9 | ------ |```SELECT ENAME, SAL FROM EMP WHERE ENAME IN ('Mohamed','Hichem', 'Maaoui');```|hichem:5000 , mohamed : 3800, maaoui:0|
@@ -136,30 +136,30 @@ Autrement dit, le développeur déclare qu’une lecture va être suivie d’une
 
 | Timing | Session N° 1  | Session N° 2 |Résultat | 
 | :----: | :----: |:----:|:----:|
-| t0| ``` SELECT ENAME, SAL FROM EMP WHERE ENAME IN ('Mohamed','Hichem');``` |||
-| t1| ``` UPDATE EMP SET SAL = 4000 WHERE ENAME ='Hichem'; ``` |------|hichem : 2800 , mohamed: 2000|
-| t2| ------ |```SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;```|session 1 : 1 row updated|
-| t3| ------ |```SELECT ENAME, SAL FROM EMP WHERE ENAME IN ('Mohamed','Hichem');```|session 2 : transaction |
-| t4| ------ |```UPDATE EMP SET SAL = 3800 WHERE ENAME ='Mohamed';```|------|
-| t5| ```Insert into EMP (EMPNO,ENAME,JOB,MGR,HIREDATE,COMM,DEPTNO) values ('9999','Maaoui','Magician',null,to_date('17/02/2021','DD/MM/RR'),null,'10');``` |------|------|
-| t6| ```COMMIT;```|------ |------|
-| t7|```SELECT ENAME, SAL FROM EMP WHERE ENAME IN ('Mohamed','Hichem', 'Maaoui');```| ------ |------|
-| t8| ------ |```SELECT ENAME, SAL FROM EMP WHERE ENAME IN ('Mohamed','Hichem', 'Maaoui');```|------|
-| t9| ```Commit;``` |------|------|
-| t10|```SELECT ENAME, SAL FROM EMP WHERE ENAME IN ('Mohamed','Hichem', 'Maaoui');```| ------ |------|
-| t11| ------ |```SELECT ENAME, SAL FROM EMP WHERE ENAME IN ('Mohamed','Hichem', 'Maaoui');```|------|
-| t12| ------ | ```COMMIT;```|------|
-| t13| ``` UPDATE EMP SET SAL = 5000 WHERE ENAME ='Maaoui'; ``` |------|session 2 : annulation|
+| t0| ``` SELECT ENAME, SAL FROM EMP WHERE ENAME IN ('Mohamed','Hichem');``` ||mohamed:2000;hichem:2800|
+| t1| ``` UPDATE EMP SET SAL = 4000 WHERE ENAME ='Hichem'; ``` |------||session 1 : 1 row updated|
+| t2| ------ |```SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;```|transaction definie|
+| t3| ------ |```SELECT ENAME, SAL FROM EMP WHERE ENAME IN ('Mohamed','Hichem');```|mohamed:2000;hichem:2800 |
+| t4| ------ |```UPDATE EMP SET SAL = 3800 WHERE ENAME ='Mohamed';```|session 2 : 1 row updated|
+| t5| ```Insert into EMP (EMPNO,ENAME,JOB,MGR,HIREDATE,COMM,DEPTNO) values ('9999','Maaoui','Magician',null,to_date('17/02/2021','DD/MM/RR'),null,'10');``` |------|session 2 : 1 ligne crée|
+| t6| ```COMMIT;```|------ |session 1:validation effecutée|
+| t7|```SELECT ENAME, SAL FROM EMP WHERE ENAME IN ('Mohamed','Hichem', 'Maaoui');```| ------ |mohamed:2000;hichem:4000;maaoui: na pas de salaire|
+| t8| ------ |```SELECT ENAME, SAL FROM EMP WHERE ENAME IN ('Mohamed','Hichem', 'Maaoui');```|mohamed:3800;hichem:2800;maaoui: n a pas de sal|
+| t9| ```Commit;``` |------|session 1 : validation effectuée|
+| t10|```SELECT ENAME, SAL FROM EMP WHERE ENAME IN ('Mohamed','Hichem', 'Maaoui');```| ------ |session1:mohamed:2000;hichem:4000;maaoui na pas de sal|
+| t11| ------ |```SELECT ENAME, SAL FROM EMP WHERE ENAME IN ('Mohamed','Hichem', 'Maaoui');```|session 2 : mohamed:3800;hichem:2800;maaoui na pas de sal|
+| t12| ------ | ```COMMIT;```|session 2:validation effectuée|
+| t13| ``` UPDATE EMP SET SAL = 5000 WHERE ENAME ='Maaoui'; ``` |------|session 1 : 1 row updated|
 | t14| ------ |```SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;```|session 2 :> transaction definie|
-| t15| ------ |```UPDATE EMP SET SAL = 5200 WHERE ENAME ='Maaoui';```|hichem :2800;mohamed3800;maaoui:0|
-| t16| ```COMMIT;``` |------|session 2 : validation effectée|
-| t17| ------ |```ROLLBACK;```|session 1 : 1 row updated |
+| t15| ------ |```UPDATE EMP SET SAL = 5200 WHERE ENAME ='Maaoui';```|mise a  jour bloque|
+| t16| ```COMMIT;``` |------|session 1 :validation effecté ; session2 : mise a jour annulée|
+| t17| ------ |```ROLLBACK;```|session 2 : annulation effectué |
 | t18| ------ |```SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;```|session 2 : transaction definie|
-| t19| ------ |```SELECT ENAME, SAL FROM EMP WHERE ENAME IN ('Mohamed','Hichem', 'Maaoui');```|mise a jour a ete definie|
-| t20| ``` UPDATE EMP SET SAL = 5200 WHERE ENAME ='Maaoui'; ``` |------|hichem : 4000 ; mohamed:3800;maaoui:5000|
+| t19| ------ |```SELECT ENAME, SAL FROM EMP WHERE ENAME IN ('Mohamed','Hichem', 'Maaoui');```|mohamed:3800;hichem:4000;maaoui:5000|
+| t20| ``` UPDATE EMP SET SAL = 5200 WHERE ENAME ='Maaoui'; ``` |------|session1 : 1 row updated|
 | t21| ```COMMIT;``` |------|session 1:->1 validation effectée|
 | t22| ------ | ```COMMIT;```|session 2 :->validation effecté|
-| t23| ------ |```SELECT ENAME, SAL FROM EMP WHERE ENAME IN ('Mohamed','Hichem', 'Maaoui');```|------|
+| t23| ------ |```SELECT ENAME, SAL FROM EMP WHERE ENAME IN ('Mohamed','Hichem', 'Maaoui');```|mohamed:3800;hichem:4000;maaoui:5200|
 
 
 
